@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class SearchTab { GENRE, COUNTRY, LANGUAGE, NAME }
+enum class SearchTab { GENRE, COUNTRY, LANGUAGE, FAVORITES }
 
 sealed class ListUiState {
     data object Idle : ListUiState()
@@ -34,28 +34,14 @@ class StationListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ListUiState>(ListUiState.Items(GENRES))
     val uiState: StateFlow<ListUiState> = _uiState.asStateFlow()
 
-    private val _nameQuery = MutableStateFlow("")
-    val nameQuery: StateFlow<String> = _nameQuery.asStateFlow()
-
     fun selectTab(tab: SearchTab) {
         _tab.update { tab }
-        _nameQuery.update { "" }
         when (tab) {
             SearchTab.GENRE -> _uiState.update { ListUiState.Items(GENRES) }
             SearchTab.COUNTRY -> loadCountries()
             SearchTab.LANGUAGE -> loadLanguages()
-            SearchTab.NAME -> _uiState.update { ListUiState.Idle }
+            SearchTab.FAVORITES -> _uiState.update { ListUiState.Idle }
         }
-    }
-
-    fun onNameQueryChanged(query: String) {
-        _nameQuery.update { query }
-    }
-
-    fun searchByName() {
-        val q = _nameQuery.value.trim()
-        if (q.isBlank()) return
-        loadStations(q) { repo.fetchByName(q) }
     }
 
     fun selectItem(item: String) {
@@ -63,7 +49,7 @@ class StationListViewModel @Inject constructor(
             SearchTab.GENRE -> loadStations(item) { repo.fetchByGenre(item) }
             SearchTab.COUNTRY -> loadStations(item) { repo.fetchByCountry(item) }
             SearchTab.LANGUAGE -> loadStations(item) { repo.fetchByLanguage(item) }
-            SearchTab.NAME -> {}
+            SearchTab.FAVORITES -> {}
         }
     }
 
@@ -72,7 +58,7 @@ class StationListViewModel @Inject constructor(
             SearchTab.GENRE -> _uiState.update { ListUiState.Items(GENRES) }
             SearchTab.COUNTRY -> loadCountries()
             SearchTab.LANGUAGE -> loadLanguages()
-            SearchTab.NAME -> _uiState.update { ListUiState.Idle }
+            SearchTab.FAVORITES -> _uiState.update { ListUiState.Idle }
         }
     }
 

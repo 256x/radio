@@ -1,7 +1,8 @@
 package fumi.day.literalradio.ui.list
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +15,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -40,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,9 +46,9 @@ import fumi.day.literalradio.data.model.Station
 import fumi.day.literalradio.ui.AppViewModel
 import fumi.day.literalradio.ui.shared.MiniPlayer
 
-private val TABS = listOf("Genre", "Country", "Language", "Name")
+private val TABS = listOf("Genre", "Country", "Language", "Favorites")
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun StationListScreen(
     onNavigateToSettings: () -> Unit,
@@ -60,7 +58,7 @@ fun StationListScreen(
 ) {
     val tab by viewModel.tab.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
-    val nameQuery by viewModel.nameQuery.collectAsState()
+    val favorites by appViewModel.favorites.collectAsState()
     val playerState by appViewModel.playerState.collectAsState()
 
     var filterQuery by remember { mutableStateOf("") }
@@ -111,81 +109,78 @@ fun StationListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            when (val state = uiState) {
-                is ListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+            if (tab == SearchTab.FAVORITES) {
+                FavoritesContent(
+                    stations = favorites,
+                    filterQuery = filterQuery,
+                    onFilterChanged = { filterQuery = it },
+                    playerState = playerState,
+                    onPlay = { appViewModel.play(it) },
+                    onToggleFavorite = { appViewModel.toggleFavorite(it) },
+                    isFavorite = { appViewModel.isFavorite(it) },
+                )
+            } else {
+                when (val state = uiState) {
+                    is ListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
 
-                is ListUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(state.msg, color = MaterialTheme.colorScheme.error)
-                }
+                    is ListUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.msg, color = MaterialTheme.colorScheme.error)
+                    }
 
-                is ListUiState.Idle -> {
-                    if (tab == SearchTab.NAME) {
-                        NameSearchBar(
-                            query = nameQuery,
-                            onQueryChanged = viewModel::onNameQueryChanged,
-                            onSearch = viewModel::searchByName,
-                        )
-                    }
-                }
+                    is ListUiState.Idle -> {}
 
-                is ListUiState.Items -> {
-                    if (tab == SearchTab.NAME) {
-                        NameSearchBar(
-                            query = nameQuery,
-                            onQueryChanged = viewModel::onNameQueryChanged,
-                            onSearch = viewModel::searchByName,
-                        )
-                    }
-                    val filtered = if (filterQuery.isBlank()) state.items
-                    else state.items.filter { it.contains(filterQuery, ignoreCase = true) }
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(filtered) { item ->
-                            Text(
-                                text = item,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.selectItem(item) }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                            )
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        }
-                    }
-                    if (tab != SearchTab.NAME) {
-                        FilterBar(query = filterQuery, onQueryChanged = { filterQuery = it })
-                    }
-                }
-
-                is ListUiState.Stations -> {
-                    val filtered = if (filterQuery.isBlank()) state.stations
-                    else state.stations.filter {
-                        it.name.contains(filterQuery, ignoreCase = true) ||
-                        it.countryCode.contains(filterQuery, ignoreCase = true)
-                    }
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        if (state.label.isNotBlank()) {
-                            item {
+                    is ListUiState.Items -> {
+                        val filtered = if (filterQuery.isBlank()) state.items
+                        else state.items.filter { it.contains(filterQuery, ignoreCase = true) }
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(filtered) { item ->
                                 Text(
-                                    text = state.label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                    text = item,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(onClick = { viewModel.selectItem(item) })
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
                                 )
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
                         }
-                        items(filtered) { station ->
-                            StationRow(
-                                station = station,
-                                isPlaying = playerState.station?.url == station.url && playerState.isPlaying,
-                                onClick = { appViewModel.play(station) },
-                            )
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        }
+                        FilterBar(query = filterQuery, onQueryChanged = { filterQuery = it })
                     }
-                    FilterBar(query = filterQuery, onQueryChanged = { filterQuery = it })
+
+                    is ListUiState.Stations -> {
+                        val filtered = if (filterQuery.isBlank()) state.stations
+                        else state.stations.filter {
+                            it.name.contains(filterQuery, ignoreCase = true) ||
+                            it.countryCode.contains(filterQuery, ignoreCase = true)
+                        }
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            if (state.label.isNotBlank()) {
+                                item {
+                                    Text(
+                                        text = state.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                }
+                            }
+                            items(filtered) { station ->
+                                StationRow(
+                                    station = station,
+                                    isPlaying = playerState.station?.url == station.url && playerState.isPlaying,
+                                    isFavorite = appViewModel.isFavorite(station),
+                                    onClick = { appViewModel.play(station) },
+                                    onLongClick = { appViewModel.toggleFavorite(station) },
+                                )
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
+                        }
+                        FilterBar(query = filterQuery, onQueryChanged = { filterQuery = it })
+                    }
                 }
             }
         }
@@ -193,11 +188,61 @@ fun StationListScreen(
 }
 
 @Composable
-private fun StationRow(station: Station, isPlaying: Boolean, onClick: () -> Unit) {
+private fun FavoritesContent(
+    stations: List<Station>,
+    filterQuery: String,
+    onFilterChanged: (String) -> Unit,
+    playerState: fumi.day.literalradio.ui.PlayerState,
+    onPlay: (Station) -> Unit,
+    onToggleFavorite: (Station) -> Unit,
+    isFavorite: (Station) -> Boolean,
+) {
+    if (stations.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                "No favorites yet.\nLong-press any station to add.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
+        return
+    }
+    val filtered = if (filterQuery.isBlank()) stations
+    else stations.filter {
+        it.name.contains(filterQuery, ignoreCase = true) ||
+        it.countryCode.contains(filterQuery, ignoreCase = true)
+    }
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(filtered, key = { it.url }) { station ->
+                StationRow(
+                    station = station,
+                    isPlaying = playerState.station?.url == station.url && playerState.isPlaying,
+                    isFavorite = isFavorite(station),
+                    onClick = { onPlay(station) },
+                    onLongClick = { onToggleFavorite(station) },
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+        }
+        FilterBar(query = filterQuery, onQueryChanged = onFilterChanged)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StationRow(
+    station: Station,
+    isPlaying: Boolean,
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -210,11 +255,24 @@ private fun StationRow(station: Station, isPlaying: Boolean, onClick: () -> Unit
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            text = station.countryCode,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isFavorite) {
+                Text(
+                    text = "★",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.padding(bottom = 1.dp),
+                )
+            }
+            Text(
+                text = station.countryCode,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -231,26 +289,4 @@ private fun FilterBar(query: String, onQueryChanged: (String) -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
     )
-}
-
-@Composable
-private fun NameSearchBar(query: String, onQueryChanged: (String) -> Unit, onSearch: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChanged,
-            placeholder = { Text("Station name…") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            modifier = Modifier.weight(1f),
-        )
-        IconButton(onClick = onSearch) {
-            Icon(Icons.Default.Search, contentDescription = "Search")
-        }
-    }
 }

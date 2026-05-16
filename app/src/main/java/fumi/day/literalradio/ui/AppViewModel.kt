@@ -10,6 +10,8 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fumi.day.literalradio.data.model.Station
@@ -34,6 +36,7 @@ data class PlayerState(
 class AppViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: UserPreferences,
+    private val gson: Gson,
 ) : ViewModel() {
 
     val userPrefs = prefs.prefs.stateIn(
@@ -43,6 +46,20 @@ class AppViewModel @Inject constructor(
 
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
+
+    private val _favorites = MutableStateFlow<List<Station>>(emptyList())
+    val favorites: StateFlow<List<Station>> = _favorites.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            prefs.prefs.collect { p ->
+                val type = object : TypeToken<List<Station>>() {}.type
+                _favorites.value = runCatching {
+                    gson.fromJson<List<Station>>(p.favoritesJson, type) ?: emptyList()
+                }.getOrDefault(emptyList())
+            }
+        }
+    }
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
@@ -93,6 +110,15 @@ class AppViewModel @Inject constructor(
             _playerState.value.station?.let { play(it) }
         }
     }
+
+    fun toggleFavorite(station: Station) {
+        val current = _favorites.value.toMutableList()
+        if (current.any { it.url == station.url }) current.removeAll { it.url == station.url }
+        else current.add(0, station)
+        viewModelScope.launch { prefs.setFavorites(gson.toJson(current)) }
+    }
+
+    fun isFavorite(station: Station): Boolean = _favorites.value.any { it.url == station.url }
 
     override fun onCleared() {
         MediaController.releaseFuture(controllerFuture ?: return)

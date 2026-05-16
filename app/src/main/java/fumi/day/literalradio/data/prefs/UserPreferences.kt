@@ -23,6 +23,7 @@ data class UserPrefs(
     val font: AppFont = AppFont.DEFAULT,
     val fontSize: Float = 16f,
     val lastStationJson: String = "",
+    val favoritesJson: String = "[]",
 )
 
 @Singleton
@@ -33,6 +34,7 @@ class UserPreferences @Inject constructor(private val context: Context) {
     private val fontKey = stringPreferencesKey("font")
     private val fontSizeKey = floatPreferencesKey("font_size")
     private val lastStationKey = stringPreferencesKey("last_station")
+    private val favoritesKey = stringPreferencesKey("favorites")
 
     val prefs: Flow<UserPrefs> = context.dataStore.data.map { p ->
         UserPrefs(
@@ -42,6 +44,7 @@ class UserPreferences @Inject constructor(private val context: Context) {
             font = AppFont.entries.find { it.name == p[fontKey] } ?: AppFont.DEFAULT,
             fontSize = p[fontSizeKey] ?: 16f,
             lastStationJson = p[lastStationKey] ?: "",
+            favoritesJson = p[favoritesKey] ?: "[]",
         )
     }
 
@@ -67,5 +70,9 @@ class UserPreferences @Inject constructor(private val context: Context) {
 
     suspend fun setLastStation(json: String) {
         context.dataStore.edit { it[lastStationKey] = json }
+    }
+
+    suspend fun setFavorites(json: String) {
+        context.dataStore.edit { it[favoritesKey] = json }
     }
 }

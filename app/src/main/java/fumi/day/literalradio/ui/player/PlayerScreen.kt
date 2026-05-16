@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
@@ -51,7 +52,9 @@ fun PlayerScreen(
     appViewModel: AppViewModel,
 ) {
     val playerState by appViewModel.playerState.collectAsState()
+    val favorites by appViewModel.favorites.collectAsState()
     val station = playerState.station
+    val isFav = station?.let { appViewModel.isFavorite(it) } ?: false
 
     Scaffold(
         topBar = {
@@ -154,6 +157,19 @@ fun PlayerScreen(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+
+            if (station != null) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = if (isFav) "★" else "☆",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { appViewModel.toggleFavorite(station) },
+                )
+            }
 
             Spacer(Modifier.weight(1.5f))
 

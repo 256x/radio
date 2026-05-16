@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- L (Segoe UI Black) -->
+    <group
+        android:translateX="26.99"
+        android:translateY="68.34"
+        android:scaleX="0.020"
+        android:scaleY="-0.020">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M141 0V1434H573V338H1067V0Z" />
+    </group>
+
+    <!-- R (Segoe UI Black) -->
+    <group
+        android:translateX="50.75"
+        android:translateY="68.34"
+        android:scaleX="0.020"
+        android:scaleY="-0.020">
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M885 0 778 309Q747 400 697.5 452.0Q648 504 590 504H573V0H141V1434H715Q1016 1434 1159.5 1335.5Q1303 1237 1303 1040Q1303 892 1219.5 792.0Q1136 692 971 647V643Q1062 615 1122.5 552.0Q1183 489 1231 365L1372 0ZM844 979Q844 1051 800.0 1093.0Q756 1135 662 1135H573V807H651Q738 807 791.0 856.0Q844 905 844 979Z" />
+    </group>
+
+</vector>

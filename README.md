@@ -1,6 +1,6 @@
 # Literal Radio
 
-The quiet companion.
+Unseen, yet close.
 
 A minimalist internet radio player for Android.
 

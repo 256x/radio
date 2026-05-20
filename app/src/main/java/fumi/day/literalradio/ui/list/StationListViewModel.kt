@@ -23,6 +23,13 @@ sealed class ListUiState {
     data class Error(val msg: String) : ListUiState()
 }
 
+sealed class GlobalSearchState {
+    data object Idle : GlobalSearchState()
+    data object Loading : GlobalSearchState()
+    data class Results(val stations: List<Station>, val query: String) : GlobalSearchState()
+    data class Error(val msg: String) : GlobalSearchState()
+}
+
 @HiltViewModel
 class StationListViewModel @Inject constructor(
     private val repo: StationRepository,
@@ -34,8 +41,12 @@ class StationListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ListUiState>(ListUiState.Items(GENRES))
     val uiState: StateFlow<ListUiState> = _uiState.asStateFlow()
 
+    private val _globalSearch = MutableStateFlow<GlobalSearchState>(GlobalSearchState.Idle)
+    val globalSearch: StateFlow<GlobalSearchState> = _globalSearch.asStateFlow()
+
     fun selectTab(tab: SearchTab) {
         _tab.update { tab }
+        _globalSearch.update { GlobalSearchState.Idle }
         when (tab) {
             SearchTab.GENRE -> _uiState.update { ListUiState.Items(GENRES) }
             SearchTab.COUNTRY -> loadCountries()
@@ -60,6 +71,23 @@ class StationListViewModel @Inject constructor(
             SearchTab.LANGUAGE -> loadLanguages()
             SearchTab.FAVORITES -> _uiState.update { ListUiState.Idle }
         }
+    }
+
+    fun searchGlobal(query: String) {
+        if (query.isBlank()) {
+            _globalSearch.update { GlobalSearchState.Idle }
+            return
+        }
+        viewModelScope.launch {
+            _globalSearch.update { GlobalSearchState.Loading }
+            runCatching { repo.fetchByName(query) }
+                .onSuccess { _globalSearch.update { _ -> GlobalSearchState.Results(it, query) } }
+                .onFailure { _globalSearch.update { _ -> GlobalSearchState.Error(it.message ?: "Error") } }
+        }
+    }
+
+    fun clearGlobalSearch() {
+        _globalSearch.update { GlobalSearchState.Idle }
     }
 
     private fun loadCountries() {

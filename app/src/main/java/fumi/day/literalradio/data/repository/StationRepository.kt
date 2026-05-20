@@ -32,11 +32,13 @@ class StationRepository @Inject constructor(
     }
 
     suspend fun getCountries(): List<String> = withContext(Dispatchers.IO) {
-        cache.getCountries() ?: api.fetchCountries().also { cache.setCountries(it) }
+        cache.getCountries()?.takeIf { it.isNotEmpty() }
+            ?: api.fetchCountries().also { if (it.isNotEmpty()) cache.setCountries(it) }
     }
 
     suspend fun getLanguages(): List<String> = withContext(Dispatchers.IO) {
-        cache.getLanguages() ?: api.fetchLanguages().also { cache.setLanguages(it) }
+        cache.getLanguages()?.takeIf { it.isNotEmpty() }
+            ?: api.fetchLanguages().also { if (it.isNotEmpty()) cache.setLanguages(it) }
     }
 
     fun clearListCache() = cache.clearCache()

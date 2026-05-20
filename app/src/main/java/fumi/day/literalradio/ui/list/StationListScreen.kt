@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -39,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,11 +61,14 @@ fun StationListScreen(
 ) {
     val tab by viewModel.tab.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val globalSearch by viewModel.globalSearch.collectAsState()
     val favorites by appViewModel.favorites.collectAsState()
     val playerState by appViewModel.playerState.collectAsState()
 
     var filterQuery by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
     LaunchedEffect(tab, uiState) { filterQuery = "" }
+    LaunchedEffect(tab) { searchQuery = ""; viewModel.clearGlobalSearch() }
 
     val isShowingStations = uiState is ListUiState.Stations
     if (isShowingStations) {
@@ -111,9 +117,12 @@ fun StationListScreen(
         ) {
             if (tab == SearchTab.FAVORITES) {
                 FavoritesContent(
-                    stations = favorites,
-                    filterQuery = filterQuery,
-                    onFilterChanged = { filterQuery = it },
+                    favorites = favorites,
+                    globalSearch = globalSearch,
+                    searchQuery = searchQuery,
+                    onSearchQueryChanged = { searchQuery = it },
+                    onSearch = { viewModel.searchGlobal(searchQuery) },
+                    onClearSearch = { searchQuery = ""; viewModel.clearGlobalSearch() },
                     playerState = playerState,
                     onPlay = { appViewModel.play(it) },
                     onToggleFavorite = { appViewModel.toggleFavorite(it) },
@@ -189,44 +198,86 @@ fun StationListScreen(
 
 @Composable
 private fun FavoritesContent(
-    stations: List<Station>,
-    filterQuery: String,
-    onFilterChanged: (String) -> Unit,
+    favorites: List<Station>,
+    globalSearch: GlobalSearchState,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
+    onSearch: () -> Unit,
+    onClearSearch: () -> Unit,
     playerState: fumi.day.literalradio.ui.PlayerState,
     onPlay: (Station) -> Unit,
     onToggleFavorite: (Station) -> Unit,
     isFavorite: (Station) -> Boolean,
 ) {
-    if (stations.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                "No favorites yet.\nLong-press any station to add.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-        }
-        return
-    }
-    val filtered = if (filterQuery.isBlank()) stations
-    else stations.filter {
-        it.name.contains(filterQuery, ignoreCase = true) ||
-        it.countryCode.contains(filterQuery, ignoreCase = true)
-    }
     Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(filtered, key = { it.url }) { station ->
-                StationRow(
-                    station = station,
-                    isPlaying = playerState.station?.url == station.url && playerState.isPlaying,
-                    isFavorite = isFavorite(station),
-                    onClick = { onPlay(station) },
-                    onLongClick = { onToggleFavorite(station) },
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        when (globalSearch) {
+            is GlobalSearchState.Idle -> {
+                if (favorites.isEmpty()) {
+                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "No favorites yet.\nLong-press any station to add.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(favorites, key = { it.url }) { station ->
+                            StationRow(
+                                station = station,
+                                isPlaying = playerState.station?.url == station.url && playerState.isPlaying,
+                                isFavorite = isFavorite(station),
+                                onClick = { onPlay(station) },
+                                onLongClick = { onToggleFavorite(station) },
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
+                }
+            }
+            is GlobalSearchState.Loading -> {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            is GlobalSearchState.Results -> {
+                if (globalSearch.stations.isEmpty()) {
+                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "No results for \"${globalSearch.query}\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(globalSearch.stations, key = { it.url }) { station ->
+                            StationRow(
+                                station = station,
+                                isPlaying = playerState.station?.url == station.url && playerState.isPlaying,
+                                isFavorite = isFavorite(station),
+                                onClick = { onPlay(station) },
+                                onLongClick = { onToggleFavorite(station) },
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
+                }
+            }
+            is GlobalSearchState.Error -> {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(globalSearch.msg, color = MaterialTheme.colorScheme.error)
+                }
             }
         }
-        FilterBar(query = filterQuery, onQueryChanged = onFilterChanged)
+        GlobalSearchBar(
+            query = searchQuery,
+            onQueryChanged = onSearchQueryChanged,
+            onSearch = onSearch,
+            onClear = onClearSearch,
+            isActive = globalSearch !is GlobalSearchState.Idle,
+        )
     }
 }
 
@@ -274,6 +325,36 @@ private fun StationRow(
             )
         }
     }
+}
+
+@Composable
+private fun GlobalSearchBar(
+    query: String,
+    onQueryChanged: (String) -> Unit,
+    onSearch: () -> Unit,
+    onClear: () -> Unit,
+    isActive: Boolean,
+) {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChanged,
+        placeholder = { Text("Search all stations…", style = MaterialTheme.typography.bodySmall) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+            if (isActive) {
+                IconButton(onClick = onClear) {
+                    Text("×", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
 
 @Composable

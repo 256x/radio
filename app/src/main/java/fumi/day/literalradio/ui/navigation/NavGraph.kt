@@ -4,9 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import fumi.day.literalradio.ui.AppViewModel
 import fumi.day.literalradio.ui.list.StationListScreen
 import fumi.day.literalradio.ui.player.PlayerScreen
+import fumi.day.literalradio.ui.player.PlayerViewModel
 import fumi.day.literalradio.ui.settings.SettingsScreen
 
 object Routes {
@@ -18,20 +18,20 @@ object Routes {
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    appViewModel: AppViewModel,
+    playerViewModel: PlayerViewModel,
 ) {
     NavHost(navController = navController, startDestination = Routes.LIST) {
         composable(Routes.LIST) {
             StationListScreen(
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToPlayer = { navController.navigate(Routes.PLAYER) },
-                appViewModel = appViewModel,
+                playerViewModel = playerViewModel,
             )
         }
         composable(Routes.PLAYER) {
             PlayerScreen(
                 onBack = { navController.popBackStack() },
-                appViewModel = appViewModel,
+                playerViewModel = playerViewModel,
             )
         }
         composable(Routes.SETTINGS) {

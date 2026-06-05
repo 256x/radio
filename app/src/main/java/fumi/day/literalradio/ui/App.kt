@@ -10,16 +10,20 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import fumi.day.literalradio.ui.navigation.NavGraph
+import fumi.day.literalradio.ui.player.PlayerViewModel
 import fumi.day.literalradio.ui.theme.LiteralRadioTheme
 
 @Composable
-fun App(appViewModel: AppViewModel = hiltViewModel()) {
+fun App(
+    appViewModel: AppViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+) {
     val prefs by appViewModel.userPrefs.collectAsState()
     val navController = rememberNavController()
 
     LiteralRadioTheme(userPrefs = prefs) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            NavGraph(navController = navController, appViewModel = appViewModel)
+            NavGraph(navController = navController, playerViewModel = playerViewModel)
         }
     }
 }

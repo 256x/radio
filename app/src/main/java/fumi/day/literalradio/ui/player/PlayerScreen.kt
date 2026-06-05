@@ -43,18 +43,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import fumi.day.literalradio.ui.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PlayerScreen(
     onBack: () -> Unit,
-    appViewModel: AppViewModel,
+    playerViewModel: PlayerViewModel,
 ) {
-    val playerState by appViewModel.playerState.collectAsState()
-    val favorites by appViewModel.favorites.collectAsState()
+    val playerState by playerViewModel.playerState.collectAsState()
     val station = playerState.station
-    val isFav = station?.let { appViewModel.isFavorite(it) } ?: false
+    val isFav = station?.let { playerViewModel.isFavorite(it) } ?: false
 
     Scaffold(
         topBar = {
@@ -82,7 +80,6 @@ fun PlayerScreen(
         ) {
             Spacer(Modifier.weight(1f))
 
-            // ラジオアイコン
             Icon(
                 imageVector = Icons.Default.Radio,
                 contentDescription = null,
@@ -92,7 +89,6 @@ fun PlayerScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // 局名
             Text(
                 text = station?.name ?: "—",
                 style = MaterialTheme.typography.titleLarge,
@@ -103,7 +99,6 @@ fun PlayerScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // 国 / codec / bitrate
             if (station != null) {
                 val meta = buildList {
                     if (station.countryCode.isNotBlank()) add(station.countryCode)
@@ -120,7 +115,6 @@ fun PlayerScreen(
                     )
                 }
 
-                // タグ
                 if (station.tags.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     FlowRow(
@@ -145,7 +139,6 @@ fun PlayerScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(20.dp))
 
-            // ICY 曲名
             Text(
                 text = playerState.trackTitle.ifBlank { "—" },
                 style = MaterialTheme.typography.bodyMedium,
@@ -167,19 +160,18 @@ fun PlayerScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { appViewModel.toggleFavorite(station) },
+                        .clickable { playerViewModel.toggleFavorite(station) },
                 )
             }
 
             Spacer(Modifier.weight(1.5f))
 
-            // Play / Stop ボタン（大きい円形）
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary)
-                    .clickable { appViewModel.togglePlayback() },
+                    .clickable { playerViewModel.togglePlayback() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

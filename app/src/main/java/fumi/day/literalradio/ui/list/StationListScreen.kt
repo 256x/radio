@@ -46,7 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import fumi.day.literalradio.data.model.Station
-import fumi.day.literalradio.ui.AppViewModel
+import fumi.day.literalradio.ui.player.PlayerState
+import fumi.day.literalradio.ui.player.PlayerViewModel
 import fumi.day.literalradio.ui.shared.MiniPlayer
 
 private val TABS = listOf("Genre", "Country", "Language", "Favorites")
@@ -56,14 +57,14 @@ private val TABS = listOf("Genre", "Country", "Language", "Favorites")
 fun StationListScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPlayer: () -> Unit,
-    appViewModel: AppViewModel,
+    playerViewModel: PlayerViewModel,
     viewModel: StationListViewModel = hiltViewModel(),
 ) {
     val tab by viewModel.tab.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val globalSearch by viewModel.globalSearch.collectAsState()
-    val favorites by appViewModel.favorites.collectAsState()
-    val playerState by appViewModel.playerState.collectAsState()
+    val favorites by playerViewModel.favorites.collectAsState()
+    val playerState by playerViewModel.playerState.collectAsState()
 
     var filterQuery by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
@@ -104,7 +105,7 @@ fun StationListScreen(
             if (playerState.station != null) {
                 MiniPlayer(
                     playerState = playerState,
-                    onToggle = { appViewModel.togglePlayback() },
+                    onToggle = { playerViewModel.togglePlayback() },
                     onClick = onNavigateToPlayer,
                 )
             }
@@ -124,9 +125,9 @@ fun StationListScreen(
                     onSearch = { viewModel.searchGlobal(searchQuery) },
                     onClearSearch = { searchQuery = ""; viewModel.clearGlobalSearch() },
                     playerState = playerState,
-                    onPlay = { appViewModel.play(it) },
-                    onToggleFavorite = { appViewModel.toggleFavorite(it) },
-                    isFavorite = { appViewModel.isFavorite(it) },
+                    onPlay = { playerViewModel.play(it) },
+                    onToggleFavorite = { playerViewModel.toggleFavorite(it) },
+                    isFavorite = { playerViewModel.isFavorite(it) },
                 )
             } else {
                 when (val state = uiState) {
@@ -181,9 +182,9 @@ fun StationListScreen(
                                 StationRow(
                                     station = station,
                                     isPlaying = playerState.station?.url == station.url && playerState.isPlaying,
-                                    isFavorite = appViewModel.isFavorite(station),
-                                    onClick = { appViewModel.play(station) },
-                                    onLongClick = { appViewModel.toggleFavorite(station) },
+                                    isFavorite = playerViewModel.isFavorite(station),
+                                    onClick = { playerViewModel.play(station) },
+                                    onLongClick = { playerViewModel.toggleFavorite(station) },
                                 )
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
@@ -204,7 +205,7 @@ private fun FavoritesContent(
     onSearchQueryChanged: (String) -> Unit,
     onSearch: () -> Unit,
     onClearSearch: () -> Unit,
-    playerState: fumi.day.literalradio.ui.PlayerState,
+    playerState: PlayerState,
     onPlay: (Station) -> Unit,
     onToggleFavorite: (Station) -> Unit,
     isFavorite: (Station) -> Boolean,

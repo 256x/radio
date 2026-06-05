@@ -21,7 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import fumi.day.literalradio.ui.PlayerState
+import fumi.day.literalradio.ui.player.PlayerState
 
 @Composable
 fun MiniPlayer(
